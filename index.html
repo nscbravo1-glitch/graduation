@@ -26,6 +26,66 @@
             flex-direction: column;
         }
 
+        /* --- Click Overlay (สำหรับบังคับให้คลิก) --- */
+        #clickOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        #clickOverlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        .click-prompt {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(1.5rem, 5vw, 3rem);
+            color: var(--neon-cyan);
+            text-shadow: 0 0 20px var(--neon-cyan);
+            margin-bottom: 20px;
+            text-align: center;
+            padding: 0 20px;
+        }
+
+        .click-icon {
+            width: 80px;
+            height: 80px;
+            border: 3px solid var(--neon-magenta);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: clickPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { background: rgba(0, 0, 0, 0.95); }
+            50% { background: rgba(0, 0, 0, 0.98); }
+        }
+
+        @keyframes clickPulse {
+            0%, 100% { 
+                transform: scale(1);
+                box-shadow: 0 0 20px var(--neon-magenta);
+            }
+            50% { 
+                transform: scale(1.1);
+                box-shadow: 0 0 40px var(--neon-magenta);
+            }
+        }
+
         /* --- Background & Canvas --- */
         .grid-background {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -119,11 +179,26 @@
             background: rgba(0, 255, 255, 0.15); border: 2px solid var(--neon-cyan);
             border-radius: 50%; display: flex; justify-content: center; align-items: center;
             cursor: pointer; z-index: 100; backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        .audio-control:hover {
+            background: rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 20px var(--neon-cyan);
         }
         @keyframes gradientShift { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
     </style>
 </head>
 <body>
+
+    <!-- Click Overlay สำหรับบังคับให้มีการคลิกก่อน -->
+    <div id="clickOverlay">
+        <div class="click-prompt">CLICK TO ENTER</div>
+        <div class="click-icon">
+            <svg viewBox="0 0 24 24" width="40" fill="#ff00ff">
+                <path d="M8 5v14l11-7z"/>
+            </svg>
+        </div>
+    </div>
 
     <div class="grid-background"></div>
     <canvas id="matrixCanvas"></canvas>
@@ -162,9 +237,13 @@
     </div>
 
     <div class="audio-control" id="audioBtn">
-        <svg id="audioIcon" viewBox="0 0 24 24" width="30" fill="#00ffff"><path d="M8 5v14l11-7z"/></svg>
+        <svg id="audioIcon" viewBox="0 0 24 24" width="30" fill="#00ffff"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
     </div>
-    <audio id="bgMusic" loop src="mp3/s.mp3"></audio>
+    
+    <!-- ใช้ muted autoplay แล้วค่อย unmute หลังคลิก -->
+    <audio id="bgMusic" loop muted autoplay>
+        <source src="mp3/s.mp3" type="audio/mpeg">
+    </audio>
 
 <script>
     const mCanvas = document.getElementById('matrixCanvas');
@@ -192,47 +271,113 @@
         requestAnimationFrame(draw);
     }
 
-    // --- Audio Logic (Autoplay + 24s Start) ---
+    // --- เทคนิค Autoplay ที่ทำงานได้กับทุก Browser ---
     const audio = document.getElementById('bgMusic');
     const audioBtn = document.getElementById('audioBtn');
     const audioIcon = document.getElementById('audioIcon');
+    const clickOverlay = document.getElementById('clickOverlay');
     const START_TIME = 24;
 
-    function handlePlay() {
-        if (audio.currentTime < START_TIME) audio.currentTime = START_TIME;
+    let audioStarted = false;
+
+    // ฟังก์ชันเริ่มเพลงจริงๆ
+    function startAudio() {
+        if (audioStarted) return;
+        audioStarted = true;
+
+        // ตั้งเวลาเริ่มต้น
+        audio.currentTime = START_TIME;
+        
+        // เปิดเสียง (unmute)
+        audio.muted = false;
+        
+        // เล่นเพลง
         audio.play().then(() => {
+            console.log('Audio playing successfully!');
+            // เปลี่ยนไอคอนเป็น Pause
             audioIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+            // ซ่อน overlay
+            clickOverlay.classList.add('hidden');
         }).catch(err => {
-            console.log("Autoplay waiting for interaction...");
+            console.error('Audio play failed:', err);
         });
     }
 
-    // เล่นทันทีเมื่อโหลด (ถ้า Browser ยอม)
-    window.addEventListener('load', handlePlay);
+    // เทคนิค 1: ใช้ muted autoplay (Chrome/Safari อนุญาต)
+    // เพลงจะเล่นแบบ muted อยู่แล้ว (ดู HTML)
+    
+    // เทคนิค 2: ลองเล่นเสียงทันทีเมื่อโหลดเสร็จ
+    window.addEventListener('load', () => {
+        // ลองเล่นแบบไม่ mute (บาง browser อาจอนุญาต)
+        audio.muted = false;
+        audio.currentTime = START_TIME;
+        audio.play().then(() => {
+            audioStarted = true;
+            audioIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+            clickOverlay.classList.add('hidden');
+        }).catch(() => {
+            // ถ้าไม่ได้ ให้แสดง overlay บังคับให้คลิก
+            audio.muted = true;
+            audio.play(); // เล่นแบบ muted ไว้ก่อน
+        });
+    });
 
-    // ดักรอการแตะหน้าจอครั้งแรกเพื่อบังคับเล่น (แก้ปัญหา Browser Block)
-    document.body.addEventListener('click', () => {
-        if (audio.paused) handlePlay();
-    }, { once: true });
+    // เทคนิค 3: Click Overlay - บังคับให้ผู้ใช้คลิก
+    clickOverlay.addEventListener('click', startAudio);
 
-    audioBtn.addEventListener('click', (e) => {
-        e.stopPropagation(); // กันไปซ้ำซ้อนกับ click ของ body
-        if (audio.paused) {
-            handlePlay();
-        } else {
-            audio.pause();
-            audioIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+    // เทคนิค 4: รองรับการกด spacebar หรือ enter
+    document.addEventListener('keydown', (e) => {
+        if ((e.code === 'Space' || e.code === 'Enter') && !audioStarted) {
+            e.preventDefault();
+            startAudio();
         }
     });
 
+    // เทคนิค 5: ดักจับการเคลื่อนไหวเมาส์/Touch ครั้งแรก
+    let firstInteraction = false;
+    ['mousemove', 'touchstart', 'scroll'].forEach(event => {
+        document.addEventListener(event, () => {
+            if (!firstInteraction && !audioStarted) {
+                firstInteraction = true;
+                startAudio();
+            }
+        }, { once: true, passive: true });
+    });
+
+    // ปุ่มควบคุมเพลง
+    audioBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        
+        if (!audioStarted) {
+            startAudio();
+        } else {
+            if (audio.paused) {
+                if (audio.currentTime < START_TIME) {
+                    audio.currentTime = START_TIME;
+                }
+                audio.play();
+                audioIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+            } else {
+                audio.pause();
+                audioIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+            }
+        }
+    });
+
+    // อัพเดท Timer
     function updateTimer() {
         const diff = new Date('2026-02-22T00:00:00') - new Date();
-        const d = Math.max(0, Math.floor(diff / 86400000)), h = Math.max(0, Math.floor((diff % 86400000) / 3600000)), m = Math.max(0, Math.floor((diff % 3600000) / 60000)), s = Math.max(0, Math.floor((diff % 60000) / 1000));
+        const d = Math.max(0, Math.floor(diff / 86400000));
+        const h = Math.max(0, Math.floor((diff % 86400000) / 3600000));
+        const m = Math.max(0, Math.floor((diff % 3600000) / 60000));
+        const s = Math.max(0, Math.floor((diff % 60000) / 1000));
         document.getElementById('timer').innerText = `${d}d ${h}h ${m}m ${s}s`;
     }
 
     window.addEventListener('resize', init);
-    init(); draw(); setInterval(updateTimer, 1000);
+    init(); 
+    draw(); 
+    setInterval(updateTimer, 1000);
 </script>
 </body>
 </html>
