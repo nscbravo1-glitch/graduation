@@ -2,12 +2,17 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>NOC - Graduation Ceremony 2026</title>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
     <style>
         /* --- Base & Theme Colors --- */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
         :root { 
             --neon-cyan: #00ffff; 
             --neon-magenta: #ff00ff;
@@ -24,6 +29,7 @@
             overflow-x: hidden;
             display: flex;
             flex-direction: column;
+            touch-action: manipulation;
         }
 
         /* --- Click Overlay (สำหรับบังคับให้คลิก) --- */
@@ -41,12 +47,11 @@
             align-items: center;
             cursor: pointer;
             animation: pulse 2s ease-in-out infinite;
+            touch-action: manipulation;
         }
         
         #clickOverlay.hidden {
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.5s ease;
+            display: none;
         }
 
         .click-prompt {
@@ -57,6 +62,7 @@
             margin-bottom: 20px;
             text-align: center;
             padding: 0 20px;
+            pointer-events: none;
         }
 
         .click-icon {
@@ -68,6 +74,7 @@
             justify-content: center;
             align-items: center;
             animation: clickPulse 1.5s ease-in-out infinite;
+            pointer-events: none;
         }
 
         @keyframes pulse {
@@ -185,6 +192,9 @@
             background: rgba(0, 255, 255, 0.3);
             box-shadow: 0 0 20px var(--neon-cyan);
         }
+        .audio-control:active {
+            transform: scale(0.95);
+        }
         @keyframes gradientShift { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
     </style>
 </head>
@@ -192,7 +202,7 @@
 
     <!-- Click Overlay สำหรับบังคับให้มีการคลิกก่อน -->
     <div id="clickOverlay">
-        <div class="click-prompt">CLICK TO ENTER</div>
+        <div class="click-prompt">แตะเพื่อเริ่ม<br>CLICK TO ENTER</div>
         <div class="click-icon">
             <svg viewBox="0 0 24 24" width="40" fill="#ff00ff">
                 <path d="M8 5v14l11-7z"/>
@@ -240,8 +250,7 @@
         <svg id="audioIcon" viewBox="0 0 24 24" width="30" fill="#00ffff"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
     </div>
     
-    <!-- ใช้ muted autoplay แล้วค่อย unmute หลังคลิก -->
-    <audio id="bgMusic" loop muted autoplay>
+    <audio id="bgMusic" loop preload="auto">
         <source src="mp3/s.mp3" type="audio/mpeg">
     </audio>
 
@@ -253,14 +262,20 @@
     let drops = [];
 
     function init() {
-        mCanvas.width = window.innerWidth; mCanvas.height = window.innerHeight;
-        pCanvas.width = window.innerWidth; pCanvas.height = window.innerHeight;
+        mCanvas.width = window.innerWidth; 
+        mCanvas.height = window.innerHeight;
+        pCanvas.width = window.innerWidth; 
+        pCanvas.height = window.innerHeight;
         const columns = Math.floor(window.innerWidth / 50);
-        drops = Array(columns).fill(0).map(() => ({ y: Math.random() * -50, ip: `192.168.${Math.floor(Math.random()*255)}` }));
+        drops = Array(columns).fill(0).map(() => ({ 
+            y: Math.random() * -50, 
+            ip: `192.168.${Math.floor(Math.random()*255)}` 
+        }));
     }
 
     function draw() {
-        mCtx.fillStyle = 'rgba(0, 0, 0, 0.1)'; mCtx.fillRect(0, 0, mCanvas.width, mCanvas.height);
+        mCtx.fillStyle = 'rgba(0, 0, 0, 0.1)'; 
+        mCtx.fillRect(0, 0, mCanvas.width, mCanvas.height);
         mCtx.font = `14px "JetBrains Mono"`;
         drops.forEach((d, i) => {
             mCtx.fillStyle = (d.y > 20) ? '#ff00ff' : '#00ffff';
@@ -271,7 +286,7 @@
         requestAnimationFrame(draw);
     }
 
-    // --- เทคนิค Autoplay ที่ทำงานได้กับทุก Browser ---
+    // --- Audio System สำหรับ Android ---
     const audio = document.getElementById('bgMusic');
     const audioBtn = document.getElementById('audioBtn');
     const audioIcon = document.getElementById('audioIcon');
@@ -279,90 +294,99 @@
     const START_TIME = 24;
 
     let audioStarted = false;
+    let audioReady = false;
 
-    // ฟังก์ชันเริ่มเพลงจริงๆ
+    // โหลดไฟล์เสียงให้พร้อม
+    audio.addEventListener('canplaythrough', () => {
+        audioReady = true;
+        console.log('Audio ready!');
+    }, { once: true });
+
+    // ฟังก์ชันเริ่มเพลง (แก้ไขสำหรับ Android)
     function startAudio() {
         if (audioStarted) return;
+        
+        console.log('Starting audio...');
+        
+        // ซ่อน overlay ทันที
+        clickOverlay.classList.add('hidden');
         audioStarted = true;
 
-        // ตั้งเวลาเริ่มต้น
-        audio.currentTime = START_TIME;
-        
-        // เปิดเสียง (unmute)
-        audio.muted = false;
-        
-        // เล่นเพลง
-        audio.play().then(() => {
-            console.log('Audio playing successfully!');
-            // เปลี่ยนไอคอนเป็น Pause
-            audioIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
-            // ซ่อน overlay
-            clickOverlay.classList.add('hidden');
-        }).catch(err => {
-            console.error('Audio play failed:', err);
-        });
+        // รอให้ไฟล์โหลดเสร็จก่อน (สำคัญมากสำหรับ Android)
+        const playAudio = () => {
+            audio.currentTime = START_TIME;
+            audio.volume = 1.0;
+            
+            const playPromise = audio.play();
+            
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    console.log('Audio playing!');
+                    audioIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+                }).catch(err => {
+                    console.error('Play error:', err);
+                    // ลองอีกครั้งหลังจาก 100ms
+                    setTimeout(() => {
+                        audio.play().catch(e => console.error('Retry failed:', e));
+                    }, 100);
+                });
+            }
+        };
+
+        if (audioReady) {
+            playAudio();
+        } else {
+            // รอให้โหลดเสร็จก่อน
+            audio.addEventListener('canplaythrough', playAudio, { once: true });
+        }
     }
 
-    // เทคนิค 1: ใช้ muted autoplay (Chrome/Safari อนุญาต)
-    // เพลงจะเล่นแบบ muted อยู่แล้ว (ดู HTML)
-    
-    // เทคนิค 2: ลองเล่นเสียงทันทีเมื่อโหลดเสร็จ
-    window.addEventListener('load', () => {
-        // ลองเล่นแบบไม่ mute (บาง browser อาจอนุญาต)
-        audio.muted = false;
-        audio.currentTime = START_TIME;
-        audio.play().then(() => {
-            audioStarted = true;
-            audioIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
-            clickOverlay.classList.add('hidden');
-        }).catch(() => {
-            // ถ้าไม่ได้ ให้แสดง overlay บังคับให้คลิก
-            audio.muted = true;
-            audio.play(); // เล่นแบบ muted ไว้ก่อน
-        });
+    // จัดการ Click/Touch Events สำหรับ Android
+    clickOverlay.addEventListener('click', (e) => {
+        e.preventDefault();
+        startAudio();
     });
 
-    // เทคนิค 3: Click Overlay - บังคับให้ผู้ใช้คลิก
-    clickOverlay.addEventListener('click', startAudio);
-
-    // เทคนิค 4: รองรับการกด spacebar หรือ enter
-    document.addEventListener('keydown', (e) => {
-        if ((e.code === 'Space' || e.code === 'Enter') && !audioStarted) {
-            e.preventDefault();
-            startAudio();
-        }
+    clickOverlay.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        startAudio();
     });
 
-    // เทคนิค 5: ดักจับการเคลื่อนไหวเมาส์/Touch ครั้งแรก
-    let firstInteraction = false;
-    ['mousemove', 'touchstart', 'scroll'].forEach(event => {
-        document.addEventListener(event, () => {
-            if (!firstInteraction && !audioStarted) {
-                firstInteraction = true;
-                startAudio();
-            }
-        }, { once: true, passive: true });
+    // กันไม่ให้ overlay ทำงานซ้ำ
+    clickOverlay.addEventListener('touchstart', (e) => {
+        e.preventDefault();
     });
 
     // ปุ่มควบคุมเพลง
     audioBtn.addEventListener('click', (e) => {
+        e.preventDefault();
         e.stopPropagation();
-        
+        toggleAudio();
+    });
+
+    audioBtn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleAudio();
+    });
+
+    function toggleAudio() {
         if (!audioStarted) {
             startAudio();
-        } else {
-            if (audio.paused) {
-                if (audio.currentTime < START_TIME) {
-                    audio.currentTime = START_TIME;
-                }
-                audio.play();
-                audioIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
-            } else {
-                audio.pause();
-                audioIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
-            }
+            return;
         }
-    });
+
+        if (audio.paused) {
+            if (audio.currentTime < START_TIME) {
+                audio.currentTime = START_TIME;
+            }
+            audio.play();
+            audioIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+        } else {
+            audio.pause();
+            audioIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+        }
+    }
 
     // อัพเดท Timer
     function updateTimer() {
@@ -374,10 +398,14 @@
         document.getElementById('timer').innerText = `${d}d ${h}h ${m}m ${s}s`;
     }
 
+    // Initialize
     window.addEventListener('resize', init);
     init(); 
     draw(); 
     setInterval(updateTimer, 1000);
+
+    // Debug สำหรับ Android
+    console.log('Page loaded, waiting for user interaction...');
 </script>
 </body>
 </html>
