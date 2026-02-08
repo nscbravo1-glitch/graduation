@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NOC - Graduation Ceremony 2026</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        /* --- Base & Theme Colors --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { 
+            --neon-cyan: #00ffff; 
+            --neon-magenta: #ff00ff;
+            --neon-green: #00ff88;
+            --dark-bg: #000; 
+        }
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            overflow: hidden;
+            background: var(--dark-bg);
+            color: #fff;
+            height: 100vh;
+            position: relative;
+            cursor: crosshair;
+        }
+
+        /* --- Layer 1: 3D Grid Background --- */
+        .grid-background {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: 
+                linear-gradient(0deg, transparent 24%, rgba(0, 255, 255, 0.05) 25%, rgba(0, 255, 255, 0.05) 26%, transparent 27%, transparent 74%, rgba(0, 255, 255, 0.05) 75%, rgba(0, 255, 255, 0.05) 76%, transparent 77%, transparent),
+                linear-gradient(90deg, transparent 24%, rgba(0, 255, 255, 0.05) 25%, rgba(0, 255, 255, 0.05) 26%, transparent 27%, transparent 74%, rgba(0, 255, 255, 0.05) 75%, rgba(0, 255, 255, 0.05) 76%, transparent 77%, transparent);
+            background-size: 50px 50px;
+            animation: gridMove 20s linear infinite;
+            z-index: 1;
+        }
+        @keyframes gridMove {
+            0% { transform: perspective(500px) rotateX(60deg) translateY(0); }
+            100% { transform: perspective(500px) rotateX(60deg) translateY(50px); }
+        }
+
+        /* --- Layer 2: Neon Circles & Overlay --- */
+        .neon-circle { position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.35; animation: float 10s ease-in-out infinite; z-index: 2; }
+        .neon-circle-1 { width: 450px; height: 450px; background: radial-gradient(circle, rgba(0, 255, 255, 0.5) 0%, transparent 70%); top: 5%; left: 5%; }
+        .neon-circle-2 { width: 350px; height: 350px; background: radial-gradient(circle, rgba(255, 0, 255, 0.5) 0%, transparent 70%); bottom: 10%; right: 5%; animation-delay: 2s; }
+        @keyframes float { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(40px, -40px) scale(1.1); } }
+
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, transparent 15%, rgba(0,0,0,0.85) 90%);
+            z-index: 6; pointer-events: none;
+        }
+
+        /* --- Layer 3: Canvases (IP Matrix, Particles, Fireworks) --- */
+        canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
+        #matrixCanvas { z-index: 3; opacity: 0.7; } /* IP Matrix Layer */
+        #particles { z-index: 4; opacity: 0.4; }
+        #fwCanvas { z-index: 5; pointer-events: none; }
+
+        /* --- Main UI Elements --- */
+        .container {
+            position: relative; z-index: 10;
+            width: 100%; height: 100vh;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+        }
+
+        /* Hexagon Profile Frame */
+        .profile-container { position: relative; width: 280px; height: 280px; margin-bottom: 30px; }
+        .hexagon {
+            position: relative; width: 100%; height: 100%;
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta), var(--neon-green));
+            padding: 4px; animation: neonPulse 2.5s ease-in-out infinite;
+        }
+        .hexagon-inner {
+            width: 100%; height: 100%; background: #000;
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            display: flex; justify-content: center; align-items: center; overflow: hidden;
+        }
+        .profile-image { width: 97%; height: 97%; object-fit: cover; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
+        @keyframes neonPulse { 0%, 100% { filter: drop-shadow(0 0 15px var(--neon-cyan)); } 50% { filter: drop-shadow(0 0 35px var(--neon-magenta)); } }
+
+        /* Typography */
+        .glitch {
+            position: relative; font-family: 'Orbitron', sans-serif; font-size: clamp(3rem, 10vw, 5.5rem); font-weight: 900;
+            text-transform: uppercase; letter-spacing: 0.15em;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta), var(--neon-green), var(--neon-cyan));
+            background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            animation: gradientShift 4s linear infinite, glitchAnim 5s infinite; position: relative;
+        }
+
+        .glitch::before,
+        .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta), var(--neon-green), var(--neon-cyan));
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .glitch::before {
+            left: 2px;
+            text-shadow: -2px 0 var(--neon-magenta);
+            animation: glitchBefore 3s infinite linear alternate-reverse;
+        }
+
+        .glitch::after {
+            left: -2px;
+            text-shadow: 2px 0 var(--neon-cyan);
+            animation: glitchAfter 2s infinite linear alternate-reverse;
+        }
+
+        @keyframes glitchAnim {
+            0%, 90%, 100% { opacity: 1; }
+            95% { opacity: 0.8; transform: skew(2deg); }
+        }
+
+        @keyframes glitchBefore {
+            0%, 100% { clip-path: inset(0 0 0 0); }
+            20% { clip-path: inset(20% 0 60% 0); }
+            40% { clip-path: inset(60% 0 20% 0); }
+            60% { clip-path: inset(40% 0 40% 0); }
+            80% { clip-path: inset(10% 0 80% 0); }
+        }
+
+        @keyframes glitchAfter {
+            0%, 100% { clip-path: inset(0 0 0 0); }
+            25% { clip-path: inset(50% 0 30% 0); }
+            50% { clip-path: inset(30% 0 50% 0); }
+            75% { clip-path: inset(70% 0 10% 0); }
+        }
+        @keyframes gradientShift { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+        .holo-text { font-size: 1.8rem; letter-spacing: 0.4em; margin-bottom: 35px; color: var(--neon-cyan); text-shadow: 0 0 15px var(--neon-cyan); opacity: 0.9; }
+
+        /* HUD Panels */
+        .info-container { display: flex; gap: 25px; flex-wrap: wrap; justify-content: center; margin-bottom: 35px; }
+        .info-panel {
+            background: rgba(0, 255, 255, 0.05); border: 2px solid rgba(0, 255, 255, 0.4);
+            border-radius: 8px; padding: 25px 45px; backdrop-filter: blur(12px); transition: 0.3s;
+        }
+        .info-panel:hover { border-color: var(--neon-cyan); box-shadow: 0 0 25px var(--neon-cyan); transform: translateY(-4px); }
+        .info-label { font-size: 0.95rem; color: var(--neon-cyan); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 1px; }
+        .info-value { font-size: 1.6rem; font-weight: 700; color: #fff; }
+
+        /* Terminal Style Invitation */
+        .terminal {
+            background: rgba(0, 0, 0, 0.85); border: 1.5px solid var(--neon-green);
+            border-radius: 6px; padding: 25px; width: 100%; max-width: 580px;
+            font-size: 1.1rem; line-height: 1.8; box-shadow: 0 0 25px rgba(0, 255, 136, 0.25);
+        }
+        .terminal span { color: var(--neon-green); font-weight: bold; }
+
+        /* Audio Control */
+        .audio-control {
+            position: fixed; bottom: 40px; right: 40px; width: 65px; height: 65px;
+            background: rgba(0, 255, 255, 0.1); border: 2.5px solid var(--neon-cyan);
+            border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            cursor: pointer; z-index: 100; transition: 0.3s; backdrop-filter: blur(10px);
+        }
+        .audio-control:hover { background: rgba(0, 255, 255, 0.3); transform: scale(1.1); box-shadow: 0 0 35px var(--neon-cyan); }
+
+        /* Cursor Trail Effect */
+        .cursor-trail {
+            position: fixed; width: 4px; height: 4px; background: var(--neon-green);
+            border-radius: 50%; pointer-events: none; z-index: 9999;
+            box-shadow: 0 0 10px var(--neon-green);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="grid-background"></div>
+    <div class="neon-circle neon-circle-1"></div>
+    <div class="neon-circle neon-circle-2"></div>
+
+    <canvas id="matrixCanvas"></canvas>
+    <canvas id="particles"></canvas>
+    <canvas id="fwCanvas"></canvas>
+
+    <div class="overlay"></div>
+
+    <div class="container">
+        <div class="profile-container">
+            <div class="hexagon">
+                <div class="hexagon-inner">
+                    <img src="img/k2.jpg" alt="Profile" class="profile-image">
+                </div>
+            </div>
+        </div>
+
+        <h1 class="glitch" data-text="GRADUATION">GRADUATION</h1>
+        <p class="holo-text">CEREMONY 2026</p>
+
+        <div class="info-container">
+            <div class="info-panel">
+                <div class="info-label">DATE</div>
+                <div class="info-value">22 FEB 2026</div>
+            </div>
+            <div class="info-panel">
+                <div class="info-label">TIME</div>
+                <div class="info-value">09:00 - 15:00</div>
+            </div>
+        </div>
+
+        <div class="terminal">
+            <div style="color: var(--neon-green); margin-bottom: 12px; font-weight: bold;">// ACCESS_GRANTED: CELEBRATION_PROTOCOL</div>
+            > Initializing network connection...<br>
+            > You are invited to join the graduation ceremony<br>
+            > at <span>วิทยาลัยเทคโนโลยีโปลิเทคนิคลานนา</span><br>
+            > Status: <span>OPERATIONAL</span> // Uptime: <span id="timer" style="color: var(--neon-magenta);">00:00:00</span>
+        </div>
+    </div>
+
+    <div class="audio-control" id="audioBtn">
+        <svg viewBox="0 0 24 24" width="35" fill="#00ffff"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+    </div>
+    <audio id="bgMusic" loop src="mp3/s.mp3" autoplay muted></audio>
+
+<script>
+    // --- Canvas Setup ---
+    const mCanvas = document.getElementById('matrixCanvas');
+    const mCtx = mCanvas.getContext('2d');
+    const pCanvas = document.getElementById('particles');
+    const pCtx = pCanvas.getContext('2d');
+    const fwCanvas = document.getElementById('fwCanvas');
+    const fwCtx = fwCanvas.getContext('2d');
+
+    let fontSize = 14; 
+    let columns, drops;
+    const particlesArray = [];
+    const fireworks = [];
+
+    // --- IP Matrix Logic (Stable & High Density) ---
+    const generateIP = () => {
+        const r = () => Math.floor(Math.random() * 256);
+        return [`192.168.${r()}.${r()}`, `10.${r()}.${r()}.${r()}`, `172.16.${r()}.${r()}`, `8.8.8.8`][Math.floor(Math.random() * 4)];
+    };
+
+    function init() {
+        const dpr = window.devicePixelRatio || 1;
+        mCanvas.width = window.innerWidth * dpr;
+        mCanvas.height = window.innerHeight * dpr;
+        mCtx.scale(dpr, dpr);
+
+        // Density จูนให้หนาแน่นพอดีกับตัว UI (fontSize * 4.5)
+        columns = Math.floor(window.innerWidth / (fontSize * 4.5));
+        drops = Array(columns).fill(0).map(() => ({
+            y: Math.random() * -100,
+            ip: generateIP()
+        }));
+
+        pCanvas.width = window.innerWidth;
+        pCanvas.height = window.innerHeight;
+        fwCanvas.width = window.innerWidth;
+        fwCanvas.height = window.innerHeight;
+
+        particlesArray.length = 0;
+        for (let i = 0; i < 45; i++) particlesArray.push(new Particle());
+    }
+
+    function drawMatrix() {
+        mCtx.fillStyle = 'rgba(0, 0, 0, 0.45)'; // ลบเงาเร็วเพื่อความชัดเจน
+        mCtx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+        
+        mCtx.font = `bold ${fontSize}px "JetBrains Mono"`;
+        for (let i = 0; i < drops.length; i++) {
+            const item = drops[i];
+            const x = Math.floor(i * fontSize * 4.5);
+            const y = Math.floor(item.y * fontSize);
+
+            // สี Cyan สลับ Magenta ตามตำแหน่งจอ
+            mCtx.fillStyle = (y > window.innerHeight / 2) ? '#ff00ff' : '#00ffff';
+            mCtx.fillText(item.ip, x, y);
+
+            if (y > window.innerHeight && Math.random() > 0.982) {
+                item.y = 0;
+                item.ip = generateIP();
+            }
+            item.y += 0.35; 
+        }
+    }
+
+    // --- Particle Topology System ---
+    class Particle {
+        constructor() {
+            this.x = Math.random() * pCanvas.width;
+            this.y = Math.random() * pCanvas.height;
+            this.speedX = (Math.random() - 0.5) * 0.8;
+            this.speedY = (Math.random() - 0.5) * 0.8;
+            this.color = Math.random() > 0.5 ? '#00ffff' : '#ff00ff';
+        }
+        update() {
+            this.x += this.speedX; this.y += this.speedY;
+            if (this.x > pCanvas.width || this.x < 0) this.speedX *= -1;
+            if (this.y > pCanvas.height || this.y < 0) this.speedY *= -1;
+        }
+        draw() {
+            pCtx.fillStyle = this.color;
+            pCtx.beginPath(); pCtx.arc(this.x, this.y, 1.2, 0, Math.PI * 2); pCtx.fill();
+        }
+    }
+
+    function drawParticles() {
+        pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+        particlesArray.forEach(p => { p.update(); p.draw(); });
+        
+        for (let a = 0; a < particlesArray.length; a++) {
+            for (let b = a; b < particlesArray.length; b++) {
+                const dist = Math.hypot(particlesArray[a].x - particlesArray[b].x, particlesArray[a].y - particlesArray[b].y);
+                if (dist < 130) {
+                    pCtx.strokeStyle = `rgba(0, 255, 255, ${0.2 * (1 - dist/130)})`;
+                    pCtx.lineWidth = 0.6; pCtx.beginPath();
+                    pCtx.moveTo(particlesArray[a].x, particlesArray[a].y);
+                    pCtx.lineTo(particlesArray[b].x, particlesArray[b].y); pCtx.stroke();
+                }
+            }
+        }
+    }
+
+    // --- Fireworks System ---
+    class Firework {
+        constructor() { this.x = Math.random() * fwCanvas.width; this.y = fwCanvas.height; this.targetY = Math.random() * (fwCanvas.height/2); this.exploded = false; this.p = []; }
+        update() {
+            if (!this.exploded) { this.y -= 4.5; if (this.y <= this.targetY) this.explode(); }
+            else { this.p.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.09; p.life -= 0.015; }); }
+        }
+        explode() {
+            this.exploded = true;
+            const colors = ['#00ffff', '#ff00ff', '#00ff88'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            for(let i=0; i<35; i++){
+                const ang = (Math.PI*2/35)*i, spd = 1.2+Math.random()*2.8;
+                this.p.push({ x:this.x, y:this.y, vx:Math.cos(ang)*spd, vy:Math.sin(ang)*spd, life:1, col: color });
+            }
+        }
+        draw() {
+            if(!this.exploded){ fwCtx.fillStyle='#fff'; fwCtx.fillRect(this.x, this.y, 2, 4); }
+            else { this.p.forEach(p => { if(p.life>0){ fwCtx.fillStyle = p.col + Math.floor(p.life*255).toString(16).padStart(2,'0'); fwCtx.beginPath(); fwCtx.arc(p.x, p.y, 1.4, 0, Math.PI*2); fwCtx.fill(); } }); }
+        }
+    }
+
+    function drawFireworks() { fwCtx.clearRect(0,0,fwCanvas.width, fwCanvas.height); fireworks.forEach((fw,i) => { fw.update(); fw.draw(); if(fw.exploded && fw.p.every(p=>p.life<=0)) fireworks.splice(i,1); }); }
+    setInterval(() => { if(fireworks.length<4 && Math.random()>0.8) fireworks.push(new Firework()); }, 1800);
+
+    // --- System Control ---
+    function updateTimer() {
+        const diff = new Date('2026-02-22T00:00:00') - new Date();
+        if (diff > 0) {
+            const d = Math.floor(diff / 86400000), h = Math.floor((diff % 86400000) / 3600000), m = Math.floor((diff % 3600000) / 60000), s = Math.floor((diff % 60000) / 1000);
+            document.getElementById('timer').innerText = `${d}d ${h}h ${m}m ${s}s`;
+        } else { document.getElementById('timer').innerText = "STATION_ACTIVE"; }
+    }
+
+    const audio = document.getElementById('bgMusic'), audioBtn = document.getElementById('audioBtn');
+    
+    // ตั้งจุดเริ่มเพลง (ใน/-หน่วยวินาที) เปลี่ยนตัวเลขนี้ได้
+    const START_TIME = 24; // เพิ่มเลขวินาที เช่น 10 = เริ่มจากวินาทีที่ 10
+    
+    // เริ่มเล่นเพลงอัตโนมัติ
+    window.addEventListener('load', () => {
+        audio.currentTime = START_TIME;
+        audio.muted = false;
+        audio.play().catch(e => console.log('Autoplay failed:', e));
+    });
+    
+    audioBtn.addEventListener('click', () => {
+        if (audio.paused) { 
+            audio.play(); 
+            audioBtn.innerHTML = '<svg viewBox="0 0 24 24" width="35" fill="#00ffff"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>'; 
+        }
+        else { 
+            audio.pause(); 
+            audioBtn.innerHTML = '<svg viewBox="0 0 24 24" width="35" fill="#00ffff"><path d="M8 5v14l11-7z"/></svg>'; 
+        }
+    });
+
+    window.addEventListener('resize', init);
+    init();
+    function animate() { drawMatrix(); drawParticles(); drawFireworks(); requestAnimationFrame(animate); }
+    animate(); setInterval(updateTimer, 1000); updateTimer();
+
+    // --- Cursor Trail Effect ---
+    document.addEventListener('mousemove', (e) => {
+        const trail = document.createElement('div');
+        trail.className = 'cursor-trail';
+        trail.style.left = e.clientX + 'px';
+        trail.style.top = e.clientY + 'px';
+        document.body.appendChild(trail);
+        setTimeout(() => trail.remove(), 400);
+    });
+</script>
+</body>
+</html>
